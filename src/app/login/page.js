@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 
@@ -15,15 +15,23 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [apiStatus, setApiStatus] = useState('checking'); // 'checking', 'found', or 'missing'
   const router = useRouter();
+
+  useEffect(() => {
+    // Check if API key is available
+    if (process.env.NEXT_PUBLIC_API_KEY) {
+      setApiStatus('found');
+    } else {
+      setApiStatus('missing');
+    }
+  }, []);
 
   const checkUserType = async (email) => {
     try {
       const response = await fetch(`https://p5vfoq23g5ps45rtvky2xydcxe0sbwph.lambda-url.us-east-1.on.aws/api/auth/user/${encodeURIComponent(email)}`, {
         method: 'GET',
         headers: {
-          // 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_KEY}`,
-          // 'Authorization': 'dv',
           'API-Key': process.env.NEXT_PUBLIC_API_KEY,
           'User-ID': email,
           'Content-Type': 'application/json'
@@ -60,7 +68,6 @@ export default function Login() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_KEY}`,
           'API-Key': process.env.NEXT_PUBLIC_API_KEY,
           'User-ID': email
         },
@@ -89,8 +96,47 @@ export default function Login() {
     }
   };
 
+  // Get debug dot color based on status
+  const getDebugDotColor = () => {
+    switch (apiStatus) {
+      case 'checking':
+        return 'bg-yellow-400';
+      case 'found':
+        return 'bg-green-400';
+      case 'missing':
+        return 'bg-red-400';
+      default:
+        return 'bg-gray-400';
+    }
+  };
+
+  // Get debug dot message based on status
+  const getDebugMessage = () => {
+    switch (apiStatus) {
+      case 'checking':
+        return 'Checking API credentials...';
+      case 'found':
+        return 'API key found';
+      case 'missing':
+        return 'API key missing';
+      default:
+        return 'Unknown status';
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 relative">
+      {/* Debug dot */}
+      <div className="absolute top-4 right-4 group">
+        <div 
+          className={`w-4 h-4 rounded-full ${getDebugDotColor()} cursor-help`}
+          title={getDebugMessage()}
+        />
+        <div className="invisible group-hover:visible absolute right-0 top-6 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
+          {getDebugMessage()}
+        </div>
+      </div>
+
       <div className="bg-white p-8 rounded-lg shadow-md w-96">
         <h1 className="text-2xl font-bold mb-6 text-center">Staff Log In</h1>
         {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
