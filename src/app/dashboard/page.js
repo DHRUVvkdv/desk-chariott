@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
+//trying if the key works
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Cookies from 'js-cookie';
@@ -193,18 +194,17 @@ const DashboardPage = () => {
             <p className="text-sm text-gray-600">{userType}</p>
           </div>
         </motion.div>
-        
+
         <nav className="flex-grow mt-6 space-y-2 px-4">
           <AnimatePresence>
             {availablePages.map((page) => (
               <motion.button
                 key={page}
                 onClick={() => setActivePage(page)}
-                className={`w-full text-left p-3 rounded-lg flex items-center ${
-                  activePage === page 
-                    ? 'bg-indigo-100 text-indigo-700' 
+                className={`w-full text-left p-3 rounded-lg flex items-center ${activePage === page
+                    ? 'bg-indigo-100 text-indigo-700'
                     : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                  }`}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
