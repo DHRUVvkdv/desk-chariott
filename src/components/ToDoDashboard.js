@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search } from 'lucide-react';
+import { Search, RotateCw } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,12 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Constants
 const statuses = ['All', 'Pending', 'In Progress', 'Completed'];
 const departments = ['All', 'Reception', 'Housekeeping', 'Maintenance'];
 const COLORS = ['#3B82F6', '#F97316', '#22C55E', '#A855F7'];
 
-// Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -33,7 +31,6 @@ const itemVariants = {
   }
 };
 
-// Helper functions
 const formatStatus = (status) => {
   if (!status) return '';
   const statusMap = {
@@ -75,22 +72,83 @@ export const OrdersDashboard = () => {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
   const [hoveredSector, setHoveredSector] = useState(null);
   const [hoveredBar, setHoveredBar] = useState(null);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [isLoadingStatus, setIsLoadingStatus] = useState(false);
+  const [isLoadingDepartment, setIsLoadingDepartment] = useState(false);
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const response = await fetch('https://p5vfoq23g5ps45rtvky2xydcxe0sbwph.lambda-url.us-east-1.on.aws/api/requests/all_status', {
-          headers: { 
-            'API-Key': process.env.NEXT_PUBLIC_API_KEY,
+  const fetchOrders = async () => {
+    setIsLoadingOrders(true);
+    try {
+      const response = await fetch('https://p5vfoq23g5ps45rtvky2xydcxe0sbwph.lambda-url.us-east-1.on.aws/api/requests/all_status', {
+        headers: { 
+          'API-Key': process.env.NEXT_PUBLIC_API_KEY,
+        }
+      });
+      if (!response.ok) throw new Error('Failed to fetch orders');
+      const data = await response.json();
+      setOrders(data.requests);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setIsLoadingOrders(false);
+    }
+  };
+
+  const fetchStatusData = async () => {
+    setIsLoadingStatus(true);
+    try {
+      const response = await fetch('https://p5vfoq23g5ps45rtvky2xydcxe0sbwph.lambda-url.us-east-1.on.aws/api/requests/all_status', {
+        headers: { 
+          'API-Key': process.env.NEXT_PUBLIC_API_KEY,
+        }
+      });
+      if (!response.ok) throw new Error('Failed to fetch status data');
+      const data = await response.json();
+      setOrders(prevOrders => {
+        const updatedOrders = [...prevOrders];
+        data.requests.forEach(newOrder => {
+          const index = updatedOrders.findIndex(order => order.request_id === newOrder.request_id);
+          if (index !== -1) {
+            updatedOrders[index].status = newOrder.status;
           }
         });
-        if (!response.ok) throw new Error('Failed to fetch orders');
-        const data = await response.json();
-        setOrders(data.requests);
-      } catch (error) {
-        console.error('Error fetching orders:', error);
-      }
-    };
+        return updatedOrders;
+      });
+    } catch (error) {
+      console.error('Error fetching status data:', error);
+    } finally {
+      setIsLoadingStatus(false);
+    }
+  };
+
+  const fetchDepartmentData = async () => {
+    setIsLoadingDepartment(true);
+    try {
+      const response = await fetch('https://p5vfoq23g5ps45rtvky2xydcxe0sbwph.lambda-url.us-east-1.on.aws/api/requests/all_status', {
+        headers: { 
+          'API-Key': process.env.NEXT_PUBLIC_API_KEY,
+        }
+      });
+      if (!response.ok) throw new Error('Failed to fetch department data');
+      const data = await response.json();
+      setOrders(prevOrders => {
+        const updatedOrders = [...prevOrders];
+        data.requests.forEach(newOrder => {
+          const index = updatedOrders.findIndex(order => order.request_id === newOrder.request_id);
+          if (index !== -1) {
+            updatedOrders[index].department = newOrder.department;
+          }
+        });
+        return updatedOrders;
+      });
+    } catch (error) {
+      console.error('Error fetching department data:', error);
+    } finally {
+      setIsLoadingDepartment(false);
+    }
+  };
+
+  useEffect(() => {
     fetchOrders();
   }, []);
 
@@ -160,7 +218,10 @@ export const OrdersDashboard = () => {
       variants={containerVariants}
       className="bg-gray-100 p-4 w-full h-screen overflow-hidden flex flex-col"
     >
-      <motion.h1 variants={itemVariants} className="text-2xl font-bold mb-4 text-gray-800">Orders Dashboard</motion.h1>
+      <motion.h1 variants={itemVariants} className="text-2xl font-bold mb-4 text-gray-800">
+        Orders Dashboard
+      </motion.h1>
+      
       <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div className="relative">
           <Search className="absolute left-3 top-3 text-gray-400" size={18} />
@@ -172,6 +233,7 @@ export const OrdersDashboard = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+        
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="bg-white">
             <SelectValue placeholder="Filter by status" />
@@ -182,6 +244,7 @@ export const OrdersDashboard = () => {
             ))}
           </SelectContent>
         </Select>
+        
         <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
           <SelectTrigger className="bg-white">
             <SelectValue placeholder="Filter by department" />
@@ -193,10 +256,16 @@ export const OrdersDashboard = () => {
           </SelectContent>
         </Select>
       </motion.div>
+
       <motion.div variants={itemVariants} className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-white shadow-lg overflow-hidden flex flex-col md:col-span-2">
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-gray-800">Current Orders</CardTitle>
+            <RotateCw
+              className={`cursor-pointer text-gray-500 hover:text-gray-700 transition-all ${isLoadingOrders ? 'animate-spin' : ''}`}
+              size={20}
+              onClick={fetchOrders}
+            />
           </CardHeader>
           <CardContent className="flex-grow p-0">
             <div className="h-[calc(115vh-300px)] overflow-auto">
@@ -239,10 +308,16 @@ export const OrdersDashboard = () => {
             </div>
           </CardContent>
         </Card>
+
         <div className="flex flex-col gap-4">
           <Card className="bg-white shadow-lg">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-gray-800">Order Status Distribution</CardTitle>
+              <RotateCw
+                className={`cursor-pointer text-gray-500 hover:text-gray-700 transition-all ${isLoadingStatus ? 'animate-spin' : ''}`}
+                size={20}
+                onClick={fetchStatusData}
+              />
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={150}>
@@ -279,9 +354,15 @@ export const OrdersDashboard = () => {
               </ResponsiveContainer>
             </CardContent>
           </Card>
+
           <Card className="bg-white shadow-lg flex-grow">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-gray-800">Orders by Department</CardTitle>
+              <RotateCw
+                className={`cursor-pointer text-gray-500 hover:text-gray-700 transition-all ${isLoadingDepartment ? 'animate-spin' : ''}`}
+                size={20}
+                onClick={fetchDepartmentData}
+              />
             </CardHeader>
             <CardContent className="flex-grow flex items-center justify-center">
               <ResponsiveContainer width="100%" height={290}>
@@ -291,7 +372,7 @@ export const OrdersDashboard = () => {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ percent }) => ` ${(percent * 100).toFixed(0)}%`}
+                    label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                     outerRadius={90}
                     fill="#8884d8"
                     dataKey="value"
