@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
+import { Loader2 } from 'lucide-react';
 
 const staffTypes = {
   housekeeping: 'Housekeeping',
@@ -15,6 +16,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [apiStatus, setApiStatus] = useState('checking'); // 'checking', 'found', or 'missing'
   const router = useRouter();
 
@@ -55,12 +57,14 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
 
     try {
       const userData = await checkUserType(email);
 
       if (userData.user_type !== 'staff') {
         setError('Access denied. This login is for staff members only.');
+        setIsLoading(false);
         return;
       }
 
@@ -81,10 +85,6 @@ export default function Login() {
         Cookies.set('user_type', staffTypes[userData.staff_type] || userData.staff_type, { expires: 7 });
         Cookies.set('user_email', email, { expires: 7 });
         
-        console.log('Session token set:', Cookies.get('session_token'));
-        console.log('User type set:', Cookies.get('user_type'));
-        console.log('User email set:', Cookies.get('user_email'));
-        
         router.push('/dashboard');
       } else {
         const errorData = await loginResponse.json();
@@ -93,6 +93,8 @@ export default function Login() {
     } catch (error) {
       console.error('Login error:', error);
       setError('An unexpected error occurred. Please try again later.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -139,16 +141,21 @@ export default function Login() {
 
       <div className="bg-white p-8 rounded-lg shadow-md w-96">
         <h1 className="text-2xl font-bold mb-6 text-center">Staff Log In</h1>
-        {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-red-500 text-sm text-center">{error}</p>
+          </div>
+        )}
         <form onSubmit={handleLogin}>
           <div className="mb-4">
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
             <input
               type="email"
               id="email"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
               required
             />
           </div>
@@ -157,17 +164,30 @@ export default function Login() {
             <input
               type="password"
               id="password"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
               required
             />
           </div>
           <button
             type="submit"
-            className="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 transition-colors"
+            disabled={isLoading}
+            className={`w-full flex items-center justify-center gap-2 p-2 rounded-md transition-colors ${
+              isLoading 
+                ? 'bg-blue-400 cursor-not-allowed' 
+                : 'bg-blue-500 hover:bg-blue-600'
+            } text-white`}
           >
-            Log In
+            {isLoading ? (
+              <>
+                <Loader2 className="animate-spin h-4 w-4" />
+                <span>Logging in...</span>
+              </>
+            ) : (
+              'Log In'
+            )}
           </button>
         </form>
       </div>
