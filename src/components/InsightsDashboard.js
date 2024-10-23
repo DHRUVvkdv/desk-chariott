@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Cookies from 'js-cookie';
+import { RotateCw } from 'lucide-react';
 
 // Import components
 import { LoyaltyDistribution } from './LoyaltyDistribution';
@@ -45,6 +46,7 @@ export const InsightsDashboard = () => {
   const [engagementData, setEngagementData] = useState(null);
   const [operationalInsights, setOperationalInsights] = useState([]);
   const [error, setError] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const [loadingStates, setLoadingStates] = useState({
     loyalty: true,
@@ -87,7 +89,7 @@ export const InsightsDashboard = () => {
 
       const loyaltyData = Object.entries(loyaltyCount)
         .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => b.value - a.value); // Sort by value descending
+        .sort((a, b) => b.value - a.value);
 
       setLoyaltyDistribution(loyaltyData);
 
@@ -97,7 +99,7 @@ export const InsightsDashboard = () => {
           name: `${user.first_name} ${user.last_name}`,
           interactions: user.interaction_counter
         }))
-        .sort((a, b) => b.interactions - a.interactions); // Sort by interactions descending
+        .sort((a, b) => b.interactions - a.interactions);
 
       setInteractionData(interactionData);
     } catch (error) {
@@ -231,6 +233,22 @@ export const InsightsDashboard = () => {
     }
   };
 
+  // Handle refresh
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        fetchUserData(true),
+        fetchEngagementData(true)
+      ]);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      setError('Error refreshing data');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   // Initial data fetch
   useEffect(() => {
     const fetchAllData = async () => {
@@ -278,8 +296,19 @@ export const InsightsDashboard = () => {
       className="min-h-screen bg-gray-50 p-4 sm:p-8"
     >
       <div className="max-w-7xl mx-auto space-y-8">
-        <motion.div variants={itemVariants} className="flex justify-between items-center">
+        <motion.div variants={itemVariants} className="relative">
           <h1 className="text-3xl font-bold text-gray-900">Insights Dashboard</h1>
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="absolute top-0 right-0 p-2 text-gray-600 hover:text-gray-900 transition-colors rounded-full hover:bg-gray-100 disabled:opacity-50"
+            title="Refresh dashboard data"
+          >
+            <RotateCw
+              size={24}
+              className={`${isRefreshing ? 'animate-spin' : ''}`}
+            />
+          </button>
           {error && <ErrorDisplay message={error} />}
         </motion.div>
 
